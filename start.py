@@ -1,3 +1,56 @@
+import base64
+import requests
+import os
+
+
+# OpenAI API Key
+api_key = os.getenv("OPENAI_API_KEY")
+
+# Function to encode the image
+def encode_image(image_path):
+  with open(image_path, "rb") as image_file:
+    return base64.b64encode(image_file.read()).decode('utf-8')
+
+# Path to your image
+# image_path = "/Users/dpang/Downloads/flask.jpg"
+image_path = "/Users/dpang/dev/togetherai/data/flow.jpg"
+
+# Getting the base64 string
+base64_image = encode_image(image_path)
+
+headers = {
+  "Content-Type": "application/json",
+  "Authorization": f"Bearer {api_key}"
+}
+
+payload = {
+  "model": "gpt-4-vision-preview",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          # "text": "Identify all the items available to be purchased and for each item list the search terms you would to find them on Amazon.com.  Put a number before the search terms"
+          "text": "Summarize the workflow in the image in the following way in less than 50 words: A step labeled ? followed. by a step labeled ? where the question mark is filled by the text detected in the boxes"
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": f"data:image/jpeg;base64,{base64_image}"
+          }
+        }
+      ]
+    }
+  ],
+  "max_tokens": 300
+}
+
+response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+
+prompt = response.json()['choices'][0]['message']['content']
+print("OpenAI results: " + prompt)
+
 # Define the path to your file
 file_path = 'data/promptcode.txt'
 prompt_path = 'data/prompt.txt'
@@ -10,11 +63,11 @@ with open(file_path, 'r') as file:
 # print(file_contents)
 
 # Open the prompt file and read its contents
-with open(prompt_path, 'r') as file:
-    prompt = file.read()
+# with open(prompt_path, 'r') as file:
+#     prompt = file.read()
 
-# prompt="A step labeled gpt and a step labeled deepgram"
-print(prompt)
+# prompt="A step labeled record, followed by a step labeled deepgram, followed by a step labeled gpt"
+print("Input: " + prompt)
 
 import openai
 import os
@@ -23,6 +76,24 @@ client = openai.OpenAI(
   api_key=os.environ.get("TOGETHER_API_KEY"),
   base_url='https://api.together.xyz',
 )
+
+def count_words(string):
+    # Split the string into words
+    words = string.split()
+
+    # Count the number of words
+    return len(words)
+
+# Example usage
+example_string = "Hello, this is an example string."
+word_count = count_words(example_string)
+print("Number of words:", word_count)
+
+# print("system: "+count_words(file_contents)
+
+print(f"system: {file_contents}")
+
+print(f"user: {prompt}")
 
 chat_completion = client.chat.completions.create(
   messages=[
@@ -38,8 +109,44 @@ chat_completion = client.chat.completions.create(
   model="mistralai/Mixtral-8x7B-Instruct-v0.1",
   # model="togethercomputer/Qwen-7B-Chat",
   # model="dfmaptool@gmail.com/Mistral-7B-Instruct-v0.1-my-demo-finetune-2024-01-13-07-41-37",
-  max_tokens=10000
+  max_tokens=20000
 )
 
-print(chat_completion.choices[0].message.content)
+answer=chat_completion.choices[0].message.content
+print("====START ANSWER====")
+print(answer)
+print("====END ANSWER====")
 
+# print(chat_completion)
+
+import re
+
+def extract_text_between_backticks(text):
+    # Regular expression pattern to match text between triple backticks
+    pattern = r'```(.*?)```'
+
+    # Find all matches in the text
+    matches = re.findall(pattern, text, re.DOTALL)
+
+    return matches
+
+# Example usage
+# example_text = "Here is some text ```inside triple backticks``` and here is some more."
+extracted_text = extract_text_between_backticks(answer)
+
+# File path where you want to write the strings
+file_path = "code_output.py"
+
+# Open the file in write mode
+with open(file_path, 'w') as file:
+    # Iterate over the list and write each string to the file
+    for etext in extracted_text:
+        file.write(etext + '\n')  # Add a newline character after each string
+
+
+
+for etext in extracted_text:
+    print("====")
+    print(etext)
+    print("====")
+# print("========Extracted text:", extracted_text)
