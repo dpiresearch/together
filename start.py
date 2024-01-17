@@ -1,6 +1,13 @@
+#
+# This program takes an image of a workflow, generates a text description
+# and attempts to generate a python program that implements the workflow.
+#
+
 import base64
 import requests
 import os
+import openai
+import re
 
 
 # OpenAI API Key
@@ -23,6 +30,9 @@ headers = {
   "Authorization": f"Bearer {api_key}"
 }
 
+#
+# Make the call to Openai to get a summary of the image
+#
 payload = {
   "model": "gpt-4-vision-preview",
   "messages": [
@@ -31,7 +41,6 @@ payload = {
       "content": [
         {
           "type": "text",
-          # "text": "Identify all the items available to be purchased and for each item list the search terms you would to find them on Amazon.com.  Put a number before the search terms"
           "text": "Summarize the workflow in the image in the following way in less than 50 words: A step labeled ? followed. by a step labeled ? where the question mark is filled by the text detected in the boxes"
         },
         {
@@ -52,8 +61,8 @@ prompt = response.json()['choices'][0]['message']['content']
 print("OpenAI results: " + prompt)
 
 # Define the path to your file
-file_path = 'data/promptcode.txt'
-prompt_path = 'data/prompt.txt'
+file_path = 'data/promptcode.txt' # This file holds instructions for the LLM to generate code
+prompt_path = 'data/prompt.txt'   # This file is an example prompt for testing.  Represents the output/summary from the vision model
 
 # Open the file and read its contents
 with open(file_path, 'r') as file:
@@ -66,17 +75,16 @@ with open(file_path, 'r') as file:
 # with open(prompt_path, 'r') as file:
 #     prompt = file.read()
 
-# prompt="A step labeled record, followed by a step labeled deepgram, followed by a step labeled gpt"
 print("Input: " + prompt)
-
-import openai
-import os
 
 client = openai.OpenAI(
   api_key=os.environ.get("TOGETHER_API_KEY"),
   base_url='https://api.together.xyz',
 )
 
+#
+# START Diagnostic information
+#
 def count_words(string):
     # Split the string into words
     words = string.split()
@@ -92,9 +100,14 @@ print("Number of words:", word_count)
 # print("system: "+count_words(file_contents)
 
 print(f"system: {file_contents}")
-
 print(f"user: {prompt}")
+#
+# END Diagnostic information
+#
 
+#
+# Call the LLM to generate code
+#
 chat_completion = client.chat.completions.create(
   messages=[
     {
@@ -119,8 +132,6 @@ print("====END ANSWER====")
 
 # print(chat_completion)
 
-import re
-
 def extract_text_between_backticks(text):
     # Regular expression pattern to match text between triple backticks
     pattern = r'```(.*?)```'
@@ -130,8 +141,6 @@ def extract_text_between_backticks(text):
 
     return matches
 
-# Example usage
-# example_text = "Here is some text ```inside triple backticks``` and here is some more."
 extracted_text = extract_text_between_backticks(answer)
 
 # File path where you want to write the strings
@@ -142,8 +151,6 @@ with open(file_path, 'w') as file:
     # Iterate over the list and write each string to the file
     for etext in extracted_text:
         file.write(etext + '\n')  # Add a newline character after each string
-
-
 
 for etext in extracted_text:
     print("====")
